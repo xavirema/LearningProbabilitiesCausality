@@ -1,0 +1,122 @@
+\documentclass[a4paper]{report}
+%\documentclass[handout]{beamer}
+
+% \usepackage{ensislidesOG}
+%\usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage[sfdefault]{roboto}  %% Option 'sfdefault' only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+% \usepackage[frenchstyle]{mathalpha}
+% \usepackage[OMLmathsfit]{isomath}
+\usepackage{graphicx}
+\usepackage{xcolor} % for ps_tex inclusions
+\usepackage{fmtcount} % th, e.g. \ordinalnum{4}
+\usepackage{booktabs}
+\usepackage[margin=1.5cm]{geometry}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage[export]{adjustbox}
+\usepackage{tikz}
+\usetikzlibrary{fit,positioning,bayesnet}
+
+
+\newcommand{\itb}{\item[$\bullet$]}
+\newcommand{\dps}{\displaystyle}
+
+\def\<{{\guillemotleft}}
+\def\>{{\guillemotright}}
+
+\def\vs1{\vspace{1mm}}
+\def\v3{\vspace{3mm}}
+
+\newcommand{\bs}[1]{\boldsymbol{\mathbf{#1}}}
+
+\newcommand{\II}{\,\mbox{I\hskip -0.600em 1}}
+
+\newcommand{\ME}{{\mathcal E}}
+\newcommand{\MN}{{\mathcal N}}
+
+\newcommand{\NN}{\ensuremath{\mathbb{N}}}
+\newcommand{\RR}{\ensuremath{\mathbb{R}}}
+
+\newcommand{\card}{\mbox{card}}
+\newcommand{\pa}{\mbox{pa}}
+
+\newcommand{\De}{\mbox{De}}
+\newcommand{\Nd}{\mbox{Nd}}
+\newcommand{\Ne}{\mbox{Ne}}
+
+\newcommand{\indep}{\perp\!\!\!\perp}
+\newcommand{\condindep}[3]{#1 \indep #2 \vert #3}
+\newcommand{\condindepP}[4]{#1 \indep_{#4} #2 \vert #3}
+\newcommand{\ts}[3]{#1_{#2}^{#3}}
+\newcommand{\set}[1]{\{#1\}}
+
+\newcommand{\expectation}[2][]{%
+\ifthenelse { \equal {#1} {} }%
+% Expectation w/o distribution
+{\mathbb{E}\left\{#2\right\}}%
+% Expectation with distribution
+{\mathbb{E}_{#1}\left\{#2\right\}}
+}
+
+\setlength{\fboxsep}{5pt}
+
+\numberwithin{equation}{chapter}
+\newcounter{exercise}
+\numberwithin{exercise}{chapter}
+% \newcommand{\exercise}[2]{\refstepcounter{exercise}\label{ex:#1}\noindent\fbox{\parbox{0.995\textwidth}{\textbf{Exercise \theexercise}: #2}}\\}
+\newcommand{\exercise}[2]{\refstepcounter{exercise}\label{ex:#1}\noindent\colorbox{blue!10}{\parbox{0.995\textwidth}{\textbf{Exercise \theexercise}: #2}}\\}
+\newcommand{\solution}[2]{\noindent\colorbox{green!10}{\parbox{0.995\textwidth}{\textbf{Solution to Exercise \ref{ex:#1}}: #2}}\vspace{5mm}\\}
+\newcounter{remark}
+\numberwithin{remark}{chapter}
+% \newcommand{\exercise}[2]{\refstepcounter{exercise}\label{ex:#1}\noindent\fbox{\parbox{0.995\textwidth}{\textbf{Exercise \theexercise}: #2}}\\}
+\newcommand{\remark}[2]{\refstepcounter{remark}\label{rmk:#1}\noindent\colorbox{red!10}{\parbox{0.995\textwidth}{\textbf{Remark \theremark}: #2}}\\}
+
+\setlength{\parindent}{0pt}
+
+
+\definecolor{mypurple}{RGB}{200,0,255}
+
+\title{Learning, Probabilities and Causality - Part 1}
+
+\author{Xavier Alameda-Pineda and Thomas Hueber}
+
+\date{MSIAM 2022-2023}
+
+\newcommand{\question}[1]{\textbf{Question}: #1}
+
+\newcommand{\myarray}[2]{\left(\begin{array}{#1}#2\end{array}\right)}
+
+\newcommand{\paint}[2]{{\color{#1}#2}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\input{notes-intro.tex}
+
+\input{notes-gmm.tex}
+
+\chapter{Hidden Markov Models}
+\label{ch:hmm}
+(Empty)
+
+\input{notes-ppca.tex}
+
+\input{notes-lds.tex}
+
+\bibliographystyle{plain}
+\bibliography{refs.bib}
+
+\end{document}
+

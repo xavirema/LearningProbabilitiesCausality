@@ -1,0 +1,414 @@
+\definecolor{mygreen}{rgb}{0,0.75,0}
+\definecolor{myred}{rgb}{0.75,0,0}
+\definecolor{myblue}{rgb}{0,0,0.75}
+
+
+\chapter{Linear dynamical systems}
+\label{ch:lds}
+Linear dynamical systems are composed of a hidden variable with a temporal structure, and an observation. They are very similar to hidden Markov models, with the very important difference that the hidden variable is continuous. {\bf LDS are to PPCA what HMM are to GMM}.
+\begin{center}
+\begin{tabular}{c||c|c}
+\toprule
+  & Discrete & Continuous \\\midrule\midrule
+ No Temporal & {GMM $p(z=k) = \pi_k$} & {PPCA $p(\bs{z}) = {\cal N}(\bs{z};0,I)$}\\\midrule
+ Temporal & {HMM $p(z_t=k|z_{t-1}=j) = \tau_{jk}$} & {LDS} $p(\bs{z}_t|\bs{z}_{t-1}) = {\cal N}(\bs{z}_t;\bs{A}\bs{z}_{t-1},\bs{\Gamma})$\\
+ \bottomrule
+\end{tabular}
+\end{center}\vspace{3mm}
+In more detail the equations defining the model are:
+\begin{equation}
+ p(\bs{z}_1) = {\cal N}(\bs{z}_1;\bs{d},\bs{\Omega}), \qquad p(\bs{z}_t|\bs{z}_{t-1}) = {\cal N}(\bs{z}_t;\bs{A}\bs{z}_{t-1},\bs{\Gamma}), \qquad p(\bs{x}_t|\bs{z}_t) = {\cal N}(\bs{x}_t;\bs{C}\bs{z}_t,\bs{\Sigma}),\label{eq:lds_model}
+\end{equation}
+where $\bs{\Omega}$, $\bs{\Gamma}$ and $\bs{\Sigma}$ are covariance matrices.\vspace{3mm}
+
+\exercise{lds-free-param}{What is the dimension of the free parameters of the model?}
+
+\section{Structured Multivariate Gaussians}
+
+Before going through the EM, we will be discussing properties of the multivariate Gaussian distribution. We \textbf{forget for a while about the sequences} and consider now the concatenation of $\bs{x}$ and $\bs{z}$: $\bs{y} = [\bs{x}^\top,\bs{z}^\top]^\top$, $\bs{y}\in\mathbb{R}^{d_x+d_z}$. We have seen that if $p(\bs{z})$ is a Gaussian, and $p(\bs{x}|\bs{z})$ is a linear-Gaussian, then the joint distribution on $\bs{y} = [\bs{x}^\top,\bs{z}^\top]^\top$ is a Gaussian as well. But is the opposite true? \vspace{3mm}
+
+If we write $p(\bs{y}) = \MN(\bs{y};\bs{\mu}_y,\bs{\Sigma}_{yy})$ then we can write:
+\begin{equation}
+  \bs{\mu}_{y}=\left(\begin{array}{c}\bs{\mu}_x\\\bs{\mu}_z\end{array}\right) \qquad
+  \bs{\Sigma}_{yy}= \left(\begin{array}{cc} \bs{\Sigma}_{xx} & \bs{\Sigma}_{xz} \\ \bs{\Sigma}_{zx} & \bs{\Sigma}_{zz} \end{array}\right)
+\end{equation}
+
+We would like to derive properties of $p(\bs{z})$ and $p(\bs{x}|\bs{z})$ from $p(\bs{y})$. In order to evaluate $\MN(\bs{y};\bs{\mu}_y,\bs{\Sigma}_{yy})$, we need to compute:
+\begin{equation}
+  \bs{\Sigma}_{yy}^{-1} = \left(\begin{array}{cc} \bs{\Sigma}_{xx} & \bs{\Sigma}_{xz} \\ \bs{\Sigma}_{zx} & \bs{\Sigma}_{zz} \end{array}\right)^{-1} \neq \left(\begin{array}{cc} \bs{\Sigma}_{xx}^{-1} & \bs{\Sigma}_{xz}^{-1} \\ \bs{\Sigma}_{zx}^{-1} & \bs{\Sigma}_{zz}^{-1} \end{array}\right)
+\end{equation} 
+
+You cannot invert a matrix block-by-block. Think about how do you invert a $2\times 2$ matrix, or what if $\bs{\Sigma}_{xy}$ is not square. We have the help of the following results.\vspace{3mm}
+
+
+\remark{block-wise-inversion}{There are two version of the block-wise inversion lemma. The first:
+\begin{equation}
+ \myarray{cc}{\bs{A} & \bs{B} \\ \bs{C} & \bs{D}}^{-1} = \myarray{cc}{\bs{M} & - \bs{M}\bs{B}\bs{D}^{-1} \\ -\bs{D}^{-1}\bs{C}\bs{M} & 
+\bs{D}^{-1} + \bs{D}^{-1}\bs{C}\bs{M}\bs{B}\bs{D}^{-1}} \label{eq:block-inversion}
+\end{equation}
+with $\bs{M} = (\bs{A}-\bs{B}\bs{D}^{-1}\bs{C})^{-1}$.
+
+And the second:
+\begin{equation}
+ \myarray{cc}{\bs{A} & \bs{B} \\ \bs{C} & \bs{D}}^{-1} = \myarray{cc}{ \bs{A}^{-1} + \bs{A}^{-1}\bs{B}\bs{N}\bs{C}\bs{A}^{-1} & - \bs{A}^{-1}\bs{C}\bs{N} \\ -\bs{N}\bs{B}\bs{A}^{-1} & 
+\bs{N}} \label{eq:block-inversion-v2}
+\end{equation}
+with $\bs{N} = (\bs{D}-\bs{C}\bs{A}^{-1}\bs{B})^{-1}$.
+}
+
+
+\exercise{block-wise-inversion}{Prove that both are indeed inverses of the original matrix. As a consequence they have to be equal. You will need the Woodbory lemma.}\vspace{3mm}
+
+ If we apply this to $p(\bs{y})$, the precision matrix $\bs{\Lambda}_{yy}$ (the inverse of $\bs{\Sigma}_{yy}$) is:
+\begin{equation}
+ \bs{\Sigma}_{yy}^{-1} = \bs{\Lambda}_{yy} =  \myarray{cc}{\bs{\Lambda}_{xx} & \bs{\Lambda}_{xz} \\ \bs{\Lambda}_{zx} & \bs{\Lambda}_{zz}} = \myarray{cc}{\bs{\Lambda}_{xx} & 
+-\bs{\Lambda}_{xx}\bs{\Sigma}_{xz}\bs{\Sigma}_{zz}^{-1} \\ -\bs{\Sigma}_{zz}^{-1}\bs{\Sigma}_{zx}\bs{\Lambda}_{xx} & \bs{\Sigma}_{zz}^{-1} + 
+\bs{\Sigma}_{zz}^{-1}\bs{\Sigma}_{zx}\bs{\Lambda}_{xx}\bs{\Sigma}_{xz}\bs{\Sigma}_{zz}^{-1}}\label{eq:block-inversion-covariance}
+\end{equation}
+with $\bs{\Lambda}_{xx} = (\bs{\Sigma}_{xx} - \bs{\Sigma}_{xz}\bs{\Sigma}_{zz}^{-1}\bs{\Sigma}_{zx})^{-1}$.\vspace{3mm}
+
+\exercise{conditional-structured-gaussian}{Use the previous expression to prove that the conditional distribution writes:
+ \begin{align} 
+ p(\bs{x}|\bs{z})= \MN(\bs{x};\bs{\mu}_{x|z},\bs{\Sigma}_{x|z}) \quad\text{with}\quad \bs{\Sigma}_{x|z} = \bs{\Lambda}_{xx}^{-1}, \quad\text{and}\quad \bs{\mu}_{x|z} = \boldsymbol{\mu}_{x} - \bs{\Lambda}_{xx}^{-1}\bs{\Lambda}_{xz}(\bs{z}-\boldsymbol{\mu}_{z}) 
+ \end{align} 
+ }\vspace{3mm}
+ 
+\exercise{marginal-structured-gaussian}{Use the previous result to prove that the marginal distribution writes:
+\begin{equation}
+ p(\bs{z}) = \MN(\bs{z};\bs{\mu}_{z},\bs{\Sigma}_{zz}).
+\end{equation}
+}
+
+The \textbf{linear-Gaussian} model showed that two independent random variables with both marginal and conditional distributions being Gaussian, then the joint is Gaussian. We now showed that if the joint is Gaussian, then both the marginal and the conditional are Gaussians. This completes our discussion on multivariate Gaussian distributions that we will use for deriving the EM algorithm.
+
+\section{Expectation Maximization for LDS}
+
+ As usual we have:
+ \begin{itemize}
+  \item Observations: $\bs{x}_{1:T}=(\bs{x}_1,\ldots,\bs{x}_{T})$, with $\bs{x}_t\in\mathbb{R}^{d_x}$.
+  \item Latent variables: $\bs{z}_{1:T}=(\bs{z}_1,\ldots,\bs{z}_{T})$, with $\bs{z}_t\in\mathbb{R}^{d_z}$.
+  \item Model parameters: $\bs{\Theta} = \{\bs{\mu}_0, \bs{\Omega}, \bs{A}, \bs{\Gamma}, \bs{C}, \bs{\Sigma}\}$.
+ \end{itemize}\vspace{3mm}
+Given an estimate of the parameters $\bar{\bs{\Theta}}$, the expectation-maximisation algorithm has two steps:
+\small
+\begin{itemize}
+ \item \textbf{Expectation}: compute the auxiliar function:
+ \begin{equation}
+  Q(\bs{\Theta},\bar{\bs{\Theta}}) = \mathbb{E}_{p(\bs{z}_{1:T}|\bs{x}_{1:T};\bar{\bs{\Theta}})} \{\log p(\bs{x}_{1:T},\bs{z}_{1:T};\bs{\Theta}) \}.
+ \end{equation}
+ \item \textbf{Maximisation}: of the auxiliary function $Q$ w.r.t.\ $\bs{\Theta}$:
+ \begin{equation}
+  \bs{\Theta}^* = \arg\max_{\bs{\Theta}} Q(\bs{\Theta},\bar{\bs{\Theta}}),
+ \end{equation}
+  then set $\bar{\bs{\Theta}}=\bs{\Theta}^*$ and go back to the E-step.
+\end{itemize}
+
+\subsection{E step}
+
+The E-step starts by deriving further the $\mathcal{Q}$ function. To this aim we first get the logarithm of the joint distribution (see Figure~\ref{fig:lds} as well):
+ \begin{align}
+  \log\; &p(\bs{x}_{1:T},\bs{z}_{1:T};\bs{\Theta}) = \log p(\bs{x}_{1:T}|\bs{z}_{1:T};\bs{\Theta}) + \log p(\bs{z}_{1:T};\bs{\Theta}) \\
+  &= \sum_{t=1}^T {\color{purple}\log p(\bs{x}_t|\bs{z}_t;\bs{\Theta})} + \sum_{t=2}^T {\color{orange}p(\bs{z}_t|\bs{z}_{t-1};\bs{\Theta})} + \log p(\bs{z}_1;\bs{\Theta})
+ \end{align}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+    \node[latent] (zm) {$\bs{z}_{t-1}$};
+    \node[latent,right=of zm] (z) {$\bs{z}_t$};
+    \node[latent,right=of z] (zp) {$\bs{z}_{t+1}$};
+    \node[latent,below=of zm] (xm) {$\bs{x}_{t-1}$};
+    \node[latent,below=of z,yshift=-1mm] (x) {$\bs{x}_t$};
+    \node[latent,below=of zp] (xp) {$\bs{x}_{t+1}$};
+    \draw[->,purple] (zm)--(xm);
+    \draw[->,purple] (z)--(x);
+    \draw[->,purple] (zp)--(xp);
+    \draw[->,orange] (zm)--(z);
+    \draw[->,orange] (z)--(zp);
+    \end{tikzpicture}
+    \caption{Graphical model of a first order hidden Markov chain (common to HMM and LDS models), with the transition and observation models highlighted in blue and green respectively.\label{fig:lds}}
+  \end{figure}
+  
+If we develop $\mathcal{Q}$:
+  \begin{align}
+   \mathcal{Q} &= \mathbb{E}_{p(\bs{z}_{1:T}|\bs{x}_{1:T};\bar{\bs{\Theta}})} \left\{ \sum_{t=1}^T \log p(\bs{x}_t|\bs{z}_t;\bs{\Theta}) + \sum_{t=2}^T p(\bs{z}_t|\bs{z}_{t-1};\bs{\Theta}) + \log p(\bs{z}_1;\bs{\Theta}) \right\} \\
+   &= \sum_{t=1}^T \mathbb{E}_{p(\bs{z}_{t}|\bs{x}_{1:T};\bar{\bs{\Theta}})} \{\log p(\bs{x}_t|\bs{z}_t;\bs{\Theta})\}\\ &+ \sum_{t=2}^T\mathbb{E}_{p(\bs{z}_{t-1},\bs{z}_t|\bs{x}_{1:T};\bar{\bs{\Theta}})}\{ \log p(\bs{z}_t|\bs{z}_{t-1};\bs{\Theta})\} + \mathbb{E}_{p(\bs{z}_{1}|\bs{x}_{1:T};\bar{\bs{\Theta}})}\{\log p(\bs{z}_1;\bs{\Theta}) \}.
+  \end{align}
+
+In order to compute $\mathcal{Q}$, we need to first compute:
+\begin{equation}
+p(\bs{z}_t|\bs{x}_{1:T};\bar{\bs{\Theta}}) \quad\text{and}\quad p(\bs{z}_{t-1},\bs{z}_t|\bs{x}_{1:T};\bar{\bs{\Theta}}), \quad \forall t.
+\end{equation}
+ 
+If we start from scratch, we write:
+\begin{align}
+ p(\bs{z}_{t}|\bs{x}_{1:T}) &= \int\ldots\int p(\bs{z}_{1:T}|\bs{x}_{1:T}) \textrm{d}\bs{z}_{1:t-1}\textrm{d}\bs{z}_{t+1:T} \\
+ &= \frac{1}{p(\bs{x}_{1:T})}\int\ldots\int p(\bs{x}_{1:T},\bs{z}_{1:T}) \textrm{d}\bs{z}_{1:t-1}\textrm{d}\bs{z}_{t+1:T} \\
+ &= \frac{1}{p(\bs{x}_{1:T})}\int\ldots\int \prod_{\tau=1}^{T} p(\bs{x}_{\tau}|\bs{z}_{\tau}) \prod_{\tau=2}^{T} p(\bs{z}_{\tau}|\bs{z}_{\tau-1})p(\bs{z}_1) \textrm{d}\bs{z}_{1:t-1}\textrm{d}\bs{z}_{t+1:T}
+%  &= \frac{1}{p(\bs{x}_{1:T})}\int\ldots\int \prod_{\tau=1}^{t} p(\bs{x}_{\tau}|\bs{z}_{\tau}) \prod_{\tau=2}^{t} p(\bs{z}_{\tau}|\bs{z}_{\tau-1})p(\bs{z}_1) \textrm{d}\bs{z}_{1:t-1}  \\
+%  & \qquad \times\int\ldots\int \prod_{\tau=t+1}^{T} p(\bs{x}_{\tau}|\bs{z}_{\tau}) \prod_{\tau=t+1}^{T} p(\bs{z}_{\tau}|\bs{z}_{\tau-1}) \textrm{d}\bs{z}_{t+1:T}
+\end{align}
+
+This requires $T-1$ integrals for every $\bs{z}_t$, so $T(T-1)$ integrals. We need a \textbf{smarter strategy}! 
+
+As in the case of HMM, we will use the \textbf{forward-backward} algorithm.\vspace{3mm}
+ 
+\textbf{Main idea}: decompose as a product of a forward and backward \textit{distributions} that can be computed recursively and re-used at every $t$:
+\begin{align}
+p(\bs{z}_t|\bs{x}_{1:T}) &\stackrel{(\bs{z}_t)}{\propto} p(\bs{z}_t,\bs{x}_{1:T}) = p(\bs{z}_t,\bs{x}_{1:t}) p(\bs{x}_{t+1:T}|\bs{z}_t)
+\end{align}\vspace{3mm}
+
+\exercise{d-separation-lds}{Prove that the past dependencies drop from the backward term, or equivalently that $\bs{x}_{1:t}$ and $\bs{x}_{t+1:T}$ are D-separated by $\bs{z}_t$.}\vspace{3mm}
+ 
+ 
+We refer to $p(\bs{z}_t,\bs{x}_{1:t})$ and $p(\bs{x}_{t+1:T}|\bs{z}_t)$ as the forward and backward \textit{distributions}, but this is a language abuse. They are denoted respectively by $\paint{mygreen}{\alpha_t(\bs{z}_t)=p(\bs{z}_t,\bs{x}_{1:t})}$ and $\paint{myred}{\beta_t(\bs{z}_t)=p(\bs{x}_{t+1:T}|\bs{z}_t)}$. We recall that $p(\bs{z}_t|\bs{x}_{1:T}) \stackrel{(\bs{z}_{1:T})}{\propto} \paint{mygreen}{p(\bs{z}_t,\bs{x}_{1:t})} \paint{myred}{p(\bs{x}_{t+1:T}|\bs{z}_t)}$, but also:
+\begin{align}
+ p(\bs{z}_{t}|\bs{x}_{1:T}) &= \frac{1}{p(\bs{x}_{1:T})}\paint{mygreen}{\int\ldots\int \prod_{\tau=1}^{t} p(\bs{x}_{\tau}|\bs{z}_{\tau}) \prod_{\tau=2}^{t} p(\bs{z}_{\tau}|\bs{z}_{\tau-1})p(\bs{z}_1) \textrm{d}\bs{z}_{1:t-1}}  \paint{myred}{\int\ldots\int \prod_{\tau=t+1}^{T} p(\bs{x}_{\tau}|\bs{z}_{\tau}) \prod_{\tau=t+1}^{T} p(\bs{z}_{\tau}|\bs{z}_{\tau-1}) \textrm{d}\bs{z}_{t+1:T}}.
+\end{align}
+
+\exercise{foward-backward-general}{Prove the general forward-backward recursions:
+\begin{equation}
+\paint{mygreen}{\alpha_t(\bs{z}_t)} \stackrel{\triangle}{=} \paint{mygreen}{p(\bs{z}_t,\bs{x}_{1:t})} = p(\bs{x}_t|\bs{z}_t) \int p(\bs{z}_t|\bs{z}_{t-1}) \paint{mygreen}{p(\bs{z}_{t-1},\bs{x}_{1:t-1})} \textrm{d}\bs{z}_{t-1} = p(\bs{x}_t|\bs{z}_t) \int p(\bs{z}_t|\bs{z}_{t-1}) \paint{mygreen}{\alpha_{t-1}(\bs{z}_{t-1})} \textrm{d}\bs{z}_{t-1},
+\end{equation}
+\begin{equation}
+\paint{myred}{\beta_t(\bs{z}_t)} \stackrel{\triangle}{=} \paint{myred}{p(\bs{x}_{t+1:T}|\bs{z}_t)} = \int p(\bs{x}_{t+1}|\bs{z}_{t+1}) p(\bs{z}_{t+1}|\bs{z}_{t}) \paint{myred}{p(\bs{x}_{t+2:T}|\bs{z}_{t+1})} \textrm{d}\bs{z}_{t+1} = \int p(\bs{x}_{t+1}|\bs{z}_{t+1}) p(\bs{z}_{t+1}|\bs{z}_{t}) \paint{myred}{\beta_{t+1}(\bs{z}_{t+1})} \textrm{d}\bs{z}_{t+1}.
+\end{equation}
+}\vspace{3mm}
+
+So we have:
+\begin{itemize}
+ \item \textbf{Forward} Start with $\paint{mygreen}{\alpha_1(\bs{z}_1)}=p(\bs{z}_1|\bs{x}_1)$ and compute:
+ \begin{equation}
+  \paint{mygreen}{\alpha_t(\bs{z}_t)} = p(\bs{x}_t|\bs{z}_t) \int p(\bs{z}_t|\bs{z}_{t-1}) \paint{mygreen}{\alpha_{t-1}(\bs{z}_{t-1})} \textrm{d}\bs{z}_{t-1}, \quad\forall t.\label{eq:lds-forward-compact}
+ \end{equation}
+ \item \textbf{Backward} Start with $\paint{myred}{\beta_{T-1}(\bs{z}_{T-1})}=p(\bs{x}_T|\bs{z}_{T-1})$ and compute:
+ \begin{equation}
+  \paint{myred}{\beta_{t}(\bs{z}_t)} = \int p(\bs{x}_{t+1}|\bs{z}_{t+1}) p(\bs{z}_{t+1}|\bs{z}_{t}) \paint{myred}{\beta_{t+1}(\bs{z}_{t+1})} \textrm{d}\bs{z}_{t+1}, \forall t.
+  \label{eq:lds-backward-compact}
+ \end{equation}
+ \item \textbf{Posterior} Compute $p(\bs{z}_t|\bs{x}_{1:T})\propto \paint{mygreen}{\alpha_t(\bs{z}_t)}\paint{myred}{\beta_{t}(\bs{z}_t)}$, $\forall t$.
+\end{itemize}
+  
+This is the exact same formulation as for HMM (we did not use the distributions of $\bs{z}_t$ and $\bs{x}_t$), so this is general. With this strategy, we need $2(T-1)$ integrals, instead of $T(T-1)$. Differently from HMM, we need to see how these recursions look like for LDS.
+ 
+\paragraph{Forward \& backward recursions} In order to compute the forward recursion we assume that the forward distribution at the previous time step is Gaussian (see below for initialisation).\vspace{3mm}
+
+\exercise{forward-lds}{Let us now assume that: $\paint{mygreen}{\alpha_{t-1}}(\bs{z}_{t-1}) = {\cal N}(\bs{z}_{t-1};\paint{mygreen}{\boldsymbol{\mu}_{t-1}},\paint{mygreen}{\bs{V}_{t-1})}$, prove that the recursion in~\ref{eq:lds-forward-compact} leads to a Gaussian as follows:
+ \begin{equation}
+  \paint{mygreen}{\alpha_t}(\bs{z}_t) = \MN(\bs{z}_t; \paint{mygreen}{\bs{\mu}_t}, \paint{mygreen}{\bs{V}_t}),
+ \quad\text{with}\quad 
+ \left\{\begin{array}{l}
+ \paint{mygreen}{\bs{V}_t} = \Big(\paint{myblue}{\bs{C}}^\top\paint{myblue}{\bs{\Sigma}}^{-1}\paint{myblue}{\bs{C}} + (\paint{myblue}{\bs{\Gamma}}+\paint{myblue}{\bs{A}}\paint{mygreen}{\bs{V}_{t-1}}\paint{myblue}{\bs{A}}^\top)^{-1}\Big)^{-1},
+ \\ \paint{mygreen}{\boldsymbol{\mu}_t}=\paint{mygreen}{\bs{V}_t}\Big( (\paint{myblue}{\bs{\Gamma}}+\paint{myblue}{\bs{A}}\paint{mygreen}{\bs{V}_{t-1}}\paint{myblue}{\bs{A}}^\top)^{-1}\paint{myblue}{\bs{A}}\paint{mygreen}{\boldsymbol{\mu}_{t-1}} + \paint{myblue}{\bs{C}}\paint{myblue}{\bs{\Sigma}}^{-1} \bs{x}_t\Big).
+ \end{array}\right.
+\end{equation}
+}
+
+\vspace{2mm}
+\exercise{backward-lds}{Using similar tools than in the forward pass, and when necessary completing the quadratic form, prove that if $\paint{myred}{\beta_{t+1}}(\bs{z}_{t+1})={\cal N}(\bs{z}_{t+1};\paint{myred}{\boldsymbol{\nu}_{t+1}},\paint{myred}{\bs{W}_{t+1}})$, then:
+\begin{equation}
+ \paint{myred}{\beta_t}(\bs{z}_t) = {\cal N}(\bs{z}_t;\paint{myred}{\boldsymbol{\nu}_t},\paint{myred}{\bs{W}_t}) \quad\text{with}\quad \paint{myred}{\bs{W}_t^{-1}} = \paint{myblue}{\bs{A}^\top}(\paint{myblue}{\bs{\Gamma}} + (\paint{myred}{\bs{W}_{t+1}^{-1}} + \paint{myblue}{\bs{C}^\top\bs{\Sigma}^{-1}\bs{C}})^{-1})^{-1}\paint{myblue}{\bs{A}}
+\end{equation}
+and
+\begin{equation}
+\paint{myred}{\boldsymbol{\nu}_t} = \paint{myred}{\bs{W}_t} \paint{myblue}{\bs{A}^\top\bs{\Gamma}^{-1}}(\paint{myblue}{\bs{C}^\top\bs{\Sigma}^{-1}\bs{C}} + \paint{myred}{\bs{W}_{t+1}^{-1}} + \paint{myblue}{\bs{\Gamma}^{-1}})^{-1} ( \paint{myblue}{\bs{C}^\top\bs{\Sigma}^{-1}}\bs{x}_{t+1} + \paint{myred}{\bs{W}_{t+1}^{-1}\boldsymbol{\nu}_{t+1}})
+\end{equation}
+}\vspace{2mm}
+
+
+\paragraph{Marginal a posteriori}
+All the previous computations were targetted to obtain the marginal a posteriori distribution:
+\begin{align}
+p(\bs{z}_t|\bs{x}_{1:T}) &\stackrel{(\bs{z}_t)}{\propto} p(\bs{z}_t,\bs{x}_{1:t})p(\bs{x}_{t+1:T}|\bs{z}_t)  
+\stackrel{(\bs{z}_t)}{\propto} {\cal N}(\bs{z}_t;\boldsymbol{\mu}_t,\bs{V}_t){\cal N}(\bs{z}_t;\boldsymbol{\nu}_t,\bs{W}_t)\\
+&\stackrel{(\bs{z}_t)}{\propto} \textrm{exp}\left(-\frac{1}{2}\left[ \bs{z}_t^\top(\bs{V}_t^{-1}+\bs{W}_t^{-1})\bs{z}_t - 2 \bs{z}_t^\top(\bs{V}_t^{-1}\boldsymbol{\mu}_t + \bs{W}_t^{-1}\boldsymbol{\nu}_t) \right]\right)\\
+&\stackrel{(\bs{z}_t)}{\propto} {\cal N}(\bs{z}_t;\bs{m}_t,\bs{\Lambda}_{t})\\
+\text{with } & \qquad\bs{\Lambda}_{t} = (\bs{V}_t^{-1}+\bs{W}_t^{-1})^{-1} \qquad \bs{m}_t = \bs{\Lambda}_{t}(\bs{V}_t^{-1}\boldsymbol{\mu}_t + \bs{W}_t^{-1}\boldsymbol{\nu}_t) \label{eq:marginal-post-param}
+\end{align}
+
+But how to initialise the recursions?
+
+\paragraph{Initialisation of the recursions} If we take a look to the forward at time $t=1$:
+\begin{equation}
+ \paint{mygreen}{\alpha_1}(\bs{z}_1) = p(\bs{z}_1,\bs{x}_1) = p(\bs{x}_1|\bs{z}_1)p(\bs{z}_1) = \MN(\bs{x}_1;\paint{myblue}{\bs{C}}\bs{z}_1,\paint{myblue}{\bs{\Sigma}})\MN(\bs{z}_1;\paint{myblue}{\bs{d}},\paint{myblue}{\bs{\Omega}}).
+\end{equation}
+Therefore:
+\begin{equation}
+ \paint{mygreen}{\alpha_1}(\bs{z}_1) = {\cal N}(\bs{z}_1;\paint{mygreen}{\boldsymbol{\mu}_1},\paint{mygreen}{\bs{V}_1}) \text{ with } \left\{\begin{array}{l} \paint{mygreen}{\bs{V}_1} = (\paint{myblue}{\bs{\Omega}^{-1}} + \paint{myblue}{\bs{C}}\paint{myblue}{\bs{\Sigma}^{-1}}\paint{myblue}{\bs{C}^\top})^{-1}, \\ \paint{mygreen}{\boldsymbol{\mu}_1} = \paint{mygreen}{\bs{V}_1}(\paint{myblue}{\bs{\Omega}^{-1}}\paint{myblue}{\bs{d}} + \paint{myblue}{\bs{C}^\top}\paint{myblue}{\bs{\Sigma}^{-1}}\bs{x}_1)\end{array}\right.
+\end{equation}
+
+% \exercise{label-ex}{Prove that $\alpha_1(\bs{z}_1)$ writes:
+% \begin{equation}
+%  \alpha_1(\bs{z}_1) = {\cal N}(\bs{z}_1;\boldsymbol{\mu}_1,\bs{V}_1) \quad\text{with}\quad \bs{V}_1 = (\bs{\Omega}^{-1} + \bs{C}\bs{\Sigma}^{-1}\bs{C}^\top)^{-1}, \quad \boldsymbol{\mu}_1 = \bs{V}_1(\bs{\Omega}^{-1}\bs{d} + \bs{C}^\top\bs{\Sigma}^{-1}\bs{x}_1)
+%  \end{equation}}\vspace{2mm}
+ \noindent Regading the backward, let's first reason with the following equation:
+ \begin{equation}
+  p(\bs{z}_T|\bs{x}_{1:T}) \stackrel{(\bs{z}_T)}{\propto} \underbrace{p(\bs{z}_T,\bs{x}_{1:T})}_{\alpha_T(\bs{z}_T)},
+ \end{equation}
+meaning that actually $\beta_T(\bs{z}_T)\stackrel{(\bs{z}_T)}{\propto} 1$, and thus $\beta_T$ should be constant. This would be achieved if we initialise $\beta_T$ as a normal with infinite covariance or zero precision $\bs{W}_T^{-1}\rightarrow 0$, but in that case it will not propertly a normal. However, we can compute the parameters of $\beta_{T-1}$ that correspond to this choice:
+\begin{equation*}
+  \paint{myred}{\bs{W}_T^{-1}}\rightarrow 0 \Rightarrow \left\{\begin{array}{l}
+  \paint{myred}{\bs{W}_{T-1}^{-1}} = \paint{myblue}{\bs{A}^\top}(\paint{myblue}{\bs{\Gamma}} + (\paint{myblue}{\bs{C}^\top}\paint{myblue}{\bs{\Sigma}^{-1}}\paint{myblue}{\bs{C}})^{-1})^{-1}\paint{myblue}{\bs{A}} \\
+  \paint{myred}{\boldsymbol{\nu}_{T-1}} = \paint{myred}{\bs{W}_{T-1}} \paint{myblue}{\bs{A}^\top}\paint{myblue}{\bs{\Gamma}^{-1}}(\paint{myblue}{\bs{C}^\top}\paint{myblue}{\bs{\Sigma}^{-1}}\paint{myblue}{\bs{C}} + \paint{myblue}{\bs{\Gamma}^{-1}})^{-1} (\paint{myblue}{\bs{C}^\top}\paint{myblue}{\bs{\Sigma}^{-1}}\bs{x}_{t+1}).
+  \end{array}\right.
+\end{equation*}
+ This is equivalent to start from $\paint{myred}{\beta_{T-1}}(\bs{z}_{T-1}) = \int p(\bs{x}_T,\bs{z}_T|\bs{z}_{T-1})\textrm{d}\bs{z}_{T-1}$. We can now compute $p(\bs{z}_t|\bs{x}_{1:T};\bar{\bs{\Theta}})$ (previous formulae):
+\begin{itemize}
+\item Initialise and compute the parameters of the forward distribution.
+\item Initialise and compute the parameters of the backward distribution.
+\item Compute the parameters of the posterior.
+\end{itemize}
+To finish the E-step, we need to compute the joint distribution $p(\bs{z}_t,\bs{z}_{t+1}|\bs{x}_{1:T})$, and compute the $\mathcal{Q}$ function.
+
+\paragraph{Joint a posteriori}
+In order to compute the joint a posteriori distribution of two consecutive hidden variables, we start by marginalising, as we did for the posterior of a single latent variable:
+\begin{align}
+%  \begin{align*}
+ &p(\bs{z}_t,\bs{z}_{t+1}|\bs{x}_{1:T}) = \int\ldots\int p(\bs{z}_{1:T}|\bs{x}_{1:T})\textrm{d}\bs{z}_{1:t-1}\textrm{d}\bs{z}_{t+2:T} \\
+ &\stackrel{(\bs{z}_t,\bs{z}_{t+1})}{\propto} \paint{mygreen}{\alpha_t}(\bs{z}_t)p(\bs{x}_{t+1}|\bs{z}_{t+1})p(\bs{z}_{t+1}|\bs{z}_t)\paint{myred}{\beta_{t+1}}(\bs{z}_{t+1})\\
+ &\stackrel{(\bs{z}_t,\bs{z}_{t+1})}{\propto} {\cal N}(\bs{z}_t;\paint{mygreen}{\boldsymbol{\mu}_t,\bs{V}_t}) {\cal N}(\bs{x}_{t+1};\paint{myblue}{\bs{C}}\bs{z}_{t+1},\paint{myblue}{\bs{\Sigma}}) {\cal N}(\bs{z}_{t+1};\paint{myblue}{\bs{A}}\bs{z}_t,\paint{myblue}{\bs{\Gamma}}) {\cal N}(\bs{z}_{t+1};\paint{myred}{\boldsymbol{\nu}_{t+1}},\paint{myred}{\bs{W}_{t+1}})\\
+ &\stackrel{(\bs{z}_t,\bs{z}_{t+1})}{\propto} \textrm{exp}\left(-\frac{1}{2}\left[ \bs{z}_t^\top(\paint{mygreen}{\bs{V}_t^{-1}} + \paint{myblue}{\bs{A}^\top\bs{\Gamma}^{-1}\bs{A}})\bs{z}_t + \bs{z}_{t+1}^\top(\paint{myblue}{\bs{C}^\top\bs{\Sigma}^{-1}\bs{C}} + \paint{myblue}{\bs{\Gamma}^{-1}} + \paint{myred}{\bs{W}_{t+1}^{-1}})\bs{z}_{t+1}\right.\right.\nonumber\\
+ & \qquad\left.\left. \phantom{\frac{1}{2}} - 2\bs{z}_{t+1}^\top\paint{myblue}{\bs{\Gamma}^{-1}\bs{A}}\bs{z}_t-2\bs{z}_t^\top\paint{mygreen}{\bs{V}_t^{-1}\boldsymbol{\mu}_t} - 2\bs{z}_{t+1}^\top(\paint{myblue}{\bs{C}^\top\bs{\Sigma}^{-1}}\bs{x}_{t+1} + \paint{myred}{\bs{W}_{t+1}\boldsymbol{\nu}_{t+1}}) \right]\right).
+% \end{align*}
+\end{align}
+This means that we will re-use the forward and backward distribution. Another consequence of the previous equation is that the joint posterior distribution is also Gaussian.
+
+\exercise{lds-joint-posterior}{From the expression above, prove that
+$p(\bs{z}_t,\bs{z}_{t+1}|\bs{x}_{1:T}) = {\cal N}([\bs{z}_{t};\bs{z}_{t+1}]; \bs{r}_t,\bs{\Xi}_t)$ with:
+\begin{equation}
+ \bs{\Xi}_t = \myarray{cc}{\paint{mygreen}{\bs{V}_t}^{-1}+\paint{myblue}{\bs{A}}^\top\paint{myblue}{\bs{\Gamma}}^{-1}\paint{myblue}{\bs{A}} & -\paint{myblue}{\bs{A}}^\top\paint{myblue}{\bs{\Gamma}}^{-1}\\-\paint{myblue}{\bs{\Gamma}}^{-1}\paint{myblue}{\bs{A}} & \paint{myred}{\bs{W}_{t+1}}^{-1} + \paint{myblue}{\bs{\Gamma}}^{-1} + \paint{myblue}{\bs{C}}^\top\paint{myblue}{\bs{\Sigma}}^{-1}\paint{myblue}{\bs{C}}}^{-1}
+ \quad\text{and}\quad
+ \bs{r}_t = \bs{\Xi}_t\myarray{c}{\paint{mygreen}{\bs{V}_t}^{-1}\paint{mygreen}{\boldsymbol{\mu}_t}\\\paint{myblue}{\bs{C}}^\top\paint{myblue}{\bs{\Sigma}}^{-1}\bs{x}_{t+1} + \paint{myred}{\bs{W}_{t+1}}^{-1}\paint{myred}{\boldsymbol{\nu}_{t+1}}}.
+\end{equation}}
+
+In the previous equations we droped the bar from $\bar{\bs{\Theta}}$ for simplicity. For the E-step ALWAYS use the parameters of the previous iteration! Thus, all equations above should use $\bar{\bs{A}}$, $\bar{\bs{\Gamma}}$, $\bar{\bs{C}}$, $\bar{\bs{\Sigma}}$, $\bar{\bs{d}}$ and $\bar{\bs{\Omega}}$.
+
+% 
+% with
+% \begin{equation}
+%  \bs{r}_t = \bs{\Xi}_t\myarray{c}{\bs{V}_t^{-1}\boldsymbol{\mu}_t\\\bs{C}^\top\bs{\Sigma}^{-1}\bs{x}_{t+1} + \bs{W}_{t+1}^{-1}\boldsymbol{\nu}_{t+1}} \qquad \bs{\Xi}_t = \myarray{cc}{\bs{V}_t^{-1}+\bs{A}^\top\bs{\Gamma}^{-1}\bs{A} & -\bs{A}^\top\bs{\Gamma}^{-1}\\-\bs{\Gamma}^{-1}\bs{A} & \bs{W}_{t+1}^{-1} + \bs{\Gamma}^{-1} + \bs{C}^\top\bs{\Sigma}^{-1}\bs{C}}^{-1}
+% \end{equation}
+% \exercise{label-ex}{If we now define the parts of the mean vector and covariance matrix corresponding to time $t$ and to time $t+1$ as ``$-$'' and ``$+$'' respectively:
+% \begin{equation}
+%  \bs{r}_t =: \myarray{c}{\bs{r}_{t-}\\\bs{r}_{t+}} \qquad \bs{\Xi}_t =: \myarray{cc}{ \bs{\Xi}_{t--} & \bs{\Xi}_{t-+} \\ \bs{\Xi}_{t+-} & \bs{\Xi}_{t++}},
+% \end{equation}
+% find the expression for each of the new definitions.}
+
+\subsection{M-step}
+In order to derive the M-step we need some tools.  We recall this important result.
+\[
+ \expectation[\mathcal{N}(\bs{z};\bs{\mu},\bs{\Sigma})]{\bs{A}\bs{z}} = \bs{A}\bs{\mu} \quad\text{and}\quad \expectation[\mathcal{N}(\bs{z};\bs{\mu},\bs{\Sigma})]{\bs{z}^\top\bs{\Lambda}\bs{z}} = \bs{\mu}^\top\bs{\Lambda}\bs{\mu} + \textrm{Tr}(\bs{\Lambda}\bs{\Sigma}).  
+\]
+and certain properties:
+\begin{equation}
+ (i)\;\textrm{Tr}(\bs{A}\bs{B}\bs{C}) = \textrm{Tr}(\bs{B}\bs{C}\bs{A}) \qquad 
+ (ii)\;\frac{\partial }{\partial \bs{A}} \textrm{Tr}(\bs{A}^\top \bs{B}) = \bs{B}
+\end{equation}
+\begin{equation}
+ (iii)\; \frac{\partial }{\partial \bs{A}} \textrm{Tr}(\bs{A} \bs{B} \bs{A}^{\top} \bs{C}) = \bs{C}\bs{A}\bs{B}+\bs{C}^\top\bs{A}\bs{B}^\top \qquad 
+ (iv)\; \frac{\partial }{\partial \bs{A}} \log|\bs{A}| = (\bs{A}^{-1})^\top
+\end{equation}
+
+Let's recall that the posterior distributions:
+\begin{equation}
+ p(\bs{z}_t|\bs{x}_{1:T}) = \MN(\bs{z}_t;\bs{m}_t,\bs{\Lambda}_{t})
+\quad\text{and}\quad
+ p(\bs{z}_t,\bs{z}_{t+1}|\bs{x}_{1:T}) = {\cal N}([\bs{z}_{t};\bs{z}_{t+1}]; \bs{\xi}_t,\bs{\Xi}_t)
+\end{equation}
+{\small ($\bs{m}_t\in\mathbb{R}^{d_z}$, $\bs{\Lambda}_{t}\in\mathbb{R}^{d_z\times d_z}$ and $\bs{\xi}_t\in\mathbb{R}^{2d_z}$, $\bs{\Xi}_t\in\mathbb{R}^{2d_z\times2d_z}$)}
+
+\paragraph{M-step: $\bs{C}$ and $\bs{\Sigma}$} The expectation of the $t$-th term writes:
+ \begin{align}
+  \mathbb{E}_{p(\bs{z}_{t}|\bs{x}_{1:T};\bar{\bs{\Theta}})} & \{\log p(\bs{x}_t|\bs{z}_t;\bs{\Theta})\} \stackrel{(\bs{\Theta})}{=}-\frac{1}{2}\log|\bs{\Sigma}| -\frac{1}{2}\textrm{Tr}\left\{\bs{\Sigma}^{-1}\Big( \bs{x}_{t}\bs{x}_{t}^\top - 2\bs{C}\bs{m}_{t}\bs{x}_{t}^\top +\bs{C}(\bs{m}_{t}\bs{m}_{t}^\top + \bs{\Lambda}_{t})\bs{C}^\top  \Big)\right\}
+ \end{align}
+ 
+ Sum over $t$:
+ \begin{align}
+  \mathcal{Q}_{\bs{C},\bs{\Sigma}} = -\frac{T}{2}\log|\bs{\Sigma}| -\frac{1}{2}\textrm{Tr}\left\{\bs{\Sigma}^{-1}\sum_{t=1}^T\Big( \bs{x}_{t}\bs{x}_{t}^\top - 2\bs{C}\bs{m}_{t}\bs{x}_{t}^\top +\bs{C}(\bs{m}_{t}\bs{m}_{t}^\top + \bs{\Lambda}_{t})\bs{C}^\top  \Big)\right\}
+ \end{align}
+ 
+ By definining: $\bs{S}_{xx} = \sum_{t=1}^T \bs{x}_t\bs{x}_t^\top \quad \bs{S}_{zx} = \sum_{t=1}^T \bs{m}\bs{x}^\top \quad \bs{S}_{zz} = \sum_{t=1}^T \bs{m}_t\bs{m}_t^\top + \bs{\Lambda}_{t}$:
+  \begin{align}
+  \mathcal{Q}_{\bs{C},\bs{\Sigma}} = -\frac{T}{2}\log|\bs{\Sigma}| -\frac{1}{2}\textrm{Tr}\left\{\bs{\Sigma}^{-1}\Big( \bs{S}_{xx} - 2\bs{C}\bs{S}_{zx} +\bs{C}\bs{S}_{zz}\bs{C}^\top  \Big)\right\}
+ \end{align}
+By taking derivatives and nulling them out we obtain:
+ \begin{equation}
+  \frac{\partial \mathcal{Q}}{\partial \bs{C}}=0 \Rightarrow \bs{C}^* = \bs{S}_{xz}( \bs{S}_{zz})^{-1}
+\quad\text{and}\quad
+ \frac{\partial \mathcal{Q}}{\partial \bs{\Sigma}^{-1}}=0 \Rightarrow \bs{\Sigma}^* = \frac{1}{T}\Big(\bs{S}_{xx} - \bs{S}_{xz}( \bs{S}_{zz})^{-1}\bs{S}_{zx}\Big).
+\end{equation}
+
+\definecolor{myfuture}{rgb}{0.5,0,0.5}
+\definecolor{mypresent}{rgb}{0,0.5,0.5}
+\definecolor{mymix}{rgb}{0.5,0.5,0}
+
+\paragraph{M-step: $\bs{A}$ and $\bs{\Gamma}$} The $t$-th term of the sum writes: 
+\begin{align}
+ -\frac{1}{2}\log|\bs{\Gamma}| -\frac{1}{2} \textrm{Tr}\left\{\mathbb{E}_{p(\paint{myfuture}{\bs{z}_{t+1}},\paint{mypresent}{\bs{z}_t}|\bs{x}_{1:T};\bar{\bs{\Theta}})}\left\{\bs{\Gamma}^{-1}\Big( \paint{myfuture}{\bs{z}_{t+1}\bs{z}_{t+1}^\top} - 2\bs{A}\paint{mypresent}{\bs{z}_{t}}\paint{myfuture}{\bs{z}_{t+1}^\top} +\bs{A}\paint{mypresent}{\bs{z}_{t}\bs{z}_{t}^\top}\bs{A}^\top  \Big)\right\}\right\}
+ \end{align}
+
+Remember $p(\bs{z}_t,\bs{z}_{t+1}|\bs{x}_{1:T}) = {\cal N}([\bs{z}_{t};\bs{z}_{t+1}]; \bs{\xi}_t,\bs{\Xi}_t)$:
+\begin{equation}
+ \bs{\xi}_t =: \myarray{c}{\paint{mypresent}{\bs{\xi}_{t-}}\\\paint{myfuture}{\bs{\xi}_{t+}}} \quad \bs{\Xi}_t =: \myarray{cc}{ \paint{mypresent}{\bs{\Xi}_{t--}} & \paint{mymix}{\bs{\Xi}_{t-+}} \\ \paint{mymix}{\bs{\Xi}_{t+-}} & \paint{myfuture}{\bs{\Xi}_{t++}}},
+\end{equation}
+
+We need to take the expectation, and the sum over $t$:
+\begin{equation}
+ \paint{myfuture}{\bs{S}_{++}} = \sum_{t=1}^T \paint{myfuture}{\bs{\xi}_{t+}}\paint{myfuture}{\bs{\xi}_{t+}^\top} + \paint{myfuture}{\bs{\Xi}_{t++}}, \quad 
+ \paint{mypresent}{\bs{S}_{--}} = \sum_{t=1}^T \paint{mypresent}{\bs{\xi}_{t-}}\paint{mypresent}{\bs{\xi}_{t-}^\top} + \paint{mypresent}{\bs{\Xi}_{t--}}, \quad
+ \paint{mymix}{\bs{S}_{-+}} = \sum_{t=1}^T \paint{mypresent}{\bs{\xi}_{t-}}\paint{myfuture}{\bs{\xi}_{t+}^\top} + \paint{mymix}{\bs{\Xi}_{t-+}},
+ \end{equation}
+
+As a result (very similar formula to the previous one):
+\begin{align}
+\mathcal{Q}_{\bs{A},\bs{\Gamma}} = -\frac{T-1}{2}\log|\bs{\Gamma}| -\frac{1}{2} \textrm{Tr}\left\{\bs{\Gamma}^{-1}\Big( \paint{myfuture}{\bs{S}_{++}} - 2\bs{A}\paint{mymix}{\bs{S}_{-+}} +\bs{A}\paint{mypresent}{\bs{S}_{--}}\bs{A}^\top  \Big)\right\}
+\end{align}
+
+The optimal values can be derived as in the previous case.
+
+\paragraph{M-step: $\bs{d}$ and $\bs{\Omega}$} It is quite easy to see that:
+\begin{equation}
+ \bs{d}^* = \bs{m}_1 \qquad \bs{\Omega}^* = \bs{\Lambda}_1.
+\end{equation}
+
+\subsection{Summary}
+ Start with initial parameters $\bar{\bs{\Theta}}$. Iterate the following:
+ \begin{description}
+  \item[E-step] Initialise and compute the forward recursion: $\paint{mygreen}{\bs{\mu}_t, \bs{V}_t}, \forall t$.
+  \item[] Initialise and compute the backward recursion: $\paint{myred}{\bs{\nu}_t, \bs{W}_t}, \forall t$.
+  \item[] Compute the parameters of the posterior, $\bs{m}_t,\bs{\Lambda}_t$ , and joint posterior $\bs{\xi}_t,\bs{\Xi}_t$, $\forall t$.
+  \item[M-step] Compute the summary statistics $\bs{S}_{xx}$, $\bs{S}_{zx}$, and $\bs{S}_{zz}$, and the optimal values $\bs{C}^*$ and $\bs{\Sigma}^*$.
+  \item[] Compute the summary statistics $\bs{S}_{++}$, $\bs{S}_{-+}$, and $\bs{S}_{--}$ and the optimal values $\bs{A}^*$ and $\bs{\Gamma}^*$.
+  \item[] Compute the optimal initial values $\bs{d}^*$ and $\bs{\Omega}^*$.
+ \end{description}
+Until some convergence criterion is met.
+
+
+\section*{Solutions to (some) Exercises}
+
+\solution{conditional-structured-gaussian}{To do so, we will consider $\bs{z}$ fixed in the joint distribution, and complete the Gaussian on $\bs{x}$. Developing the joint distribution with the blocks of the precision matrix of $\bs{y}$:
+\begin{align}
+ & \log\MN(\bs{y};\bs{\mu}_y,\bs{\Sigma}_{yy})  \stackrel{\bs{y}}{=} -\frac{1}{2}(\bs{y}-\bs{\mu}_y)^\top\bs{\Sigma}_{yy}^{-1}(\bs{y}-\bs{\mu}_y) \\
+ &\stackrel{(\bs{x},\bs{z})}{=} -\frac{1}{2}\Big((\bs{x}-\bs{\mu}_x)^\top\bs{\Lambda}_{xx}(\bs{x}-\bs{\mu}_x) + 2(\bs{x}-\bs{\mu}_x)^\top\bs{\Lambda}_{xz}(\bs{z}-\bs{\mu}_z)\\&\qquad + (\bs{z}-\bs{\mu}_z)^\top\bs{\Lambda}_{zz}(\bs{z}-\bs{\mu}_z)\Big).
+\end{align}
+Now considering a fixed value of $\bs{z}$ we write:
+ \begin{equation}
+   \log p(\bs{x}|\bs{z}) \stackrel{(\bs{x})}{=}-\frac{1}{2}\Big(\bs{x}^\top\underbrace{\bs{\Lambda}_{xx}}_{\bs{\Sigma}_{x|z}^{-1}}\bs{x}  - 2\bs{x}^\top\bs{\Sigma}_{x|z}^{-1}\underbrace{\bs{\Sigma}_{x|z}\Big(\bs{\Lambda}_{xx}\boldsymbol{\mu}_{x} - \bs{\Lambda}_{xz}(\bs{z}-\boldsymbol{\mu}_{z})\Big)}_{\boldsymbol{\mu}_{x|z}}\Big).
+ \end{equation}
+Therefore, $p(\bs{x}|\bs{z})= \MN(\bs{x};\bs{\mu}_{x|z},\bs{\Sigma}_{x|z})$ with: 
+\begin{align} 
+\bs{\Sigma}_{x|z} = \bs{\Lambda}_{xx}^{-1}, \qquad \bs{\mu}_{x|z}&=\bs{\Sigma}_{x|z}\Big(\bs{\Lambda}_{xx}\boldsymbol{\mu}_{x} - \bs{\Lambda}_{xz}(\bs{z}-\boldsymbol{\mu}_{z})\Big) \\ &= \boldsymbol{\mu}_{x} - \bs{\Lambda}_{xx}^{-1}\bs{\Lambda}_{xz}(\bs{z}-\boldsymbol{\mu}_{z})
+\end{align} 
+}
+
+\solution{marginal-structured-gaussian}{We will start by considering the Bayes theorem in logarithm form:
+\begin{align}
+ \log p(\bs{z}) &= \log p(\bs{x},\bs{z}) - \log p(\bs{x}|\bs{z}) \\
+   &\stackrel{(\bs{x},\bs{z})}{=} -\frac{1}{2}\Big( (\bs{x}-\bs{\mu}_x)^\top\bs{\Lambda}_{xx}(\bs{x}-\bs{\mu}_x) + 2(\bs{x}-\bs{\mu}_x)^\top\bs{\Lambda}_{xz}(\bs{z}-\bs{\mu}_z) \\
+   &\qquad (\bs{z}-\bs{\mu}_z)^\top\bs{\Lambda}_{zz}(\bs{z}-\bs{\mu}_z) \Big)  +\frac{1}{2} \Big( (\bs{x}-\bs{\mu}_{x|z})^\top\bs{\Sigma}_{x|z}^{-1}(\bs{x}-\bs{\mu}_{x|z}) \Big)\\
+   &\stackrel{(\bs{x},\bs{z})}{=} -\frac{1}{2}\Big( (\bs{x}-\bs{\mu}_x)^\top\bs{\Lambda}_{xx}(\bs{x}-\bs{\mu}_x) + 2(\bs{x}-\bs{\mu}_x)^\top\bs{\Lambda}_{xz}(\bs{z}-\bs{\mu}_z)\\
+   &\qquad + (\bs{z}-\bs{\mu}_z)^\top\bs{\Lambda}_{zz}(\bs{z}-\bs{\mu}_z)\Big)  + \frac{1}{2} \Big( (\bs{x}-\bs{\mu}_{x})^\top\bs{\Lambda}_{xx}(\bs{x}-\bs{\mu}_{x})\\ 
+   &\qquad + 2(\bs{x}-\bs{\mu}_x)^\top\bs{\Lambda}_{xx}\bs{\Lambda}_{xx}^{-1}\bs{\Lambda}_{xz}(\bs{z}-\bs{\mu}_z) + (\bs{z}-\bs{\mu}_{z})^\top\bs{\Lambda}_{xz}^\top\bs{\Lambda}_{xx}^{-1}\bs{\Lambda}_{xz}(\bs{z}-\bs{\mu}_{z})\Big) \\
+   &\stackrel{\bs{z}}{=} -\frac{1}{2}(\bs{z}-\bs{\mu}_{z})^\top\Big(\bs{\Lambda}_{zz}-\bs{\Lambda}_{xz}^\top\bs{\Lambda}_{xx}^{-1}\bs{\Lambda}_{xz}\Big)(\bs{z}-\bs{\mu}_{z}),
+  \end{align}
+which leads to the desired result after applying the Woodbury lemma to see that $\bs{\Sigma}_{zz} = \Big(\bs{\Lambda}_{zz}-\bs{\Lambda}_{xz}^\top\bs{\Lambda}_{xx}^{-1}\bs{\Lambda}_{xz}\Big)^{-1}$.
+}
