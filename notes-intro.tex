@@ -24,7 +24,7 @@ We will be discussing probabilistic models with \textbf{hidden} or \textbf{laten
 \paragraph{Example 1: Clustering} Given a set of data points $(x_j)_{j=1,\ldots,n}$ in ${\mathbb R}^d$, we aim to find (\& predict) clusters (groups of points). In a probabilistic model-based approach, we will have one latent variables assigned to each point, $z_j$. The realisation of the latent variable will index the cluster the associated observation belongs to. The model states that two observations belonging to the same cluster should have the same conditional distribution. We will discuss this model in detail in the Gaussian mixture model (GMM) chapter.
 \begin{figure}[H]
 \centering
-\includegraphics[height=4.5cm]{fig/I-Introduction/clustering-3.pdf}
+\includegraphics[height=4.5cm]{fig/clustering-3.pdf}
 \caption{Example of a clustering result in 2D with 3 clusters.}
 \end{figure}
 
@@ -33,7 +33,7 @@ We will be discussing probabilistic models with \textbf{hidden} or \textbf{laten
 	
 \begin{figure}[H]
 \centering
-\includegraphics[height=4.4cm]{fig/I-Introduction/ppca_cloud_axes.pdf}
+\includegraphics[height=4.4cm]{fig/ppca_cloud_axes.pdf}
 \caption{Example of dimensionality reduction result from 3 to 2 dimensions (spanned by the blue and red vectors. The original points are projected in the sub-space with lower dimension (e.g.\ green arrow).}
 \end{figure}
 
@@ -41,7 +41,7 @@ We will be discussing probabilistic models with \textbf{hidden} or \textbf{laten
 \paragraph{Example 3: Analysis of Sequential Data} Temporal data segmentation can be seen as a special case of clustering, where temporal dependencies are important. One can hypothesize that the observation/latent variables at time $t$ depend only on a few of the past variables. In that case we say that the model is Markovian. A very important example are hidden Markov models (HMM), that will we widely discussed.
 \begin{figure}[H]
 \centering
-\includegraphics[height=4.4cm]{fig/I-Introduction/hmm.pdf}
+\includegraphics[height=4.4cm]{fig/hmm.pdf}
 \caption{Example of temporal segmentation of a time-series into three color-coded different segments.}
 \end{figure}
 
@@ -171,21 +171,21 @@ Implicitly, we are saying that for any invertible matrix $\mathbf{A}$, $\mathbf{
 The first case corresponds to plot the standard Gaussian:
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.7\textwidth]{fig/I-Introduction/mv-gaussian-standard.png}
+ \includegraphics[width=0.7\textwidth]{fig/mv-gaussian-standard.png}
  \caption{Plots corresponding to the standard multivariate Gaussian. (left) Level curves and sample data points in green. (right) 3D plot of the probability density function, and associated level curves.}
 \end{figure}
 
 The second case corresponds to scaling the points with different values on the first and second dimension.
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.7\textwidth]{fig/I-Introduction/mv-gaussian-scale.png}
+ \includegraphics[width=0.7\textwidth]{fig/mv-gaussian-scale.png}
  \caption{Plots corresponding to the standard multivariate Gaussian scaled using $\mathbf{A}_1$.}
 \end{figure}
 
 The third case will have the same plot as the first one, except that the samples will be rotated. The fourth case corresponds to composing scaling the rotation.
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.7\textwidth]{fig/I-Introduction/mv-gaussian-full.png}
+ \includegraphics[width=0.7\textwidth]{fig/mv-gaussian-full.png}
  \caption{Plots corresponding to the standard multivariate Gaussian scaled using $\mathbf{A}_2\mathbf{A}_1$.}
 \end{figure}
 
@@ -253,7 +253,7 @@ We will be using \textit{models} between variables. In our case this model descr
 %%% TODO Make it tikz
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.05\textwidth]{fig/I-Introduction/simple-model.pdf}
+ \includegraphics[width=0.05\textwidth]{fig/simple-model.pdf}
  \caption{Simple model with two variables.\label{fig:simple-model}}
 \end{figure}
 
@@ -324,10 +324,10 @@ We will start study conditional independence with the smallest model that can be
 %% TODO: Pass to tikz
 \begin{figure}[H]
 \centering
-\includegraphics[width=.15\textwidth]{fig/I-Introduction/full-xyz.pdf}\hspace{1cm}
-\includegraphics[width=.15\textwidth]{fig/I-Introduction/twokids-xyz.pdf}\hspace{1cm}
-\includegraphics[width=.15\textwidth]{fig/I-Introduction/twoparents-xyz.pdf}\hspace{1cm}
-\includegraphics[width=.15\textwidth]{fig/I-Introduction/cascaded-xyz.pdf}
+\includegraphics[width=.15\textwidth]{fig/full-xyz.pdf}\hspace{1cm}
+\includegraphics[width=.15\textwidth]{fig/twokids-xyz.pdf}\hspace{1cm}
+\includegraphics[width=.15\textwidth]{fig/twoparents-xyz.pdf}\hspace{1cm}
+\includegraphics[width=.15\textwidth]{fig/cascaded-xyz.pdf}
 \caption{Three-variable models, from left to right: Full (all dependencies are used), Two-kids ($y\rightarrow z$ dependency missing), Two-parents ($x\rightarrow y$ dependency missing) and Cascaded ($x\rightarrow z$ dependency missing).\label{fig:3-var-models}}
 \end{figure}
 
@@ -371,13 +371,13 @@ Let $x$, $y$, and $z$ be random variables, we say that $x$ and $y$ are \textbf{c
 \subsection{D-separation}
 Let's consider the following variables and dependencies.
 \begin{center}
-\includegraphics[width=0.4\textwidth]{fig/I-Introduction/huge-muvar.pdf}
+\includegraphics[width=0.4\textwidth]{fig/huge-muvar.pdf}
 \end{center}
 Is $P \indep V \;|\; T$ ? How would you do it ? Is the previous strategy scalable ? Let us recall the 3-variable models:
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.15\textwidth]{fig/I-Introduction/twokids-abc-color.pdf}\hspace{1cm}\includegraphics[width=0.15\textwidth]{fig/I-Introduction/cascaded-abc-color.pdf}\hspace{2cm}\includegraphics[width=0.15\textwidth]{fig/I-Introduction/twoparents-abc-color.pdf}
+\includegraphics[width=0.15\textwidth]{fig/twokids-abc-color.pdf}\hspace{1cm}\includegraphics[width=0.15\textwidth]{fig/cascaded-abc-color.pdf}\hspace{2cm}\includegraphics[width=0.15\textwidth]{fig/twoparents-abc-color.pdf}
 \caption{Recalling the 3-variable models with new variable names. From left to right: two-kids, cascaded and two-parents.\label{fig:3-var-highlighted}}
 \end{figure}
 \begin{description}
@@ -406,7 +406,7 @@ $\Rightarrow$ If $A \indep B \,|\, C$, nodes within tail-to-tail or head-to-tail
 \end{enumerate}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.25\textwidth]{fig/II-GraphicalModels/blockedpaths.pdf}
+\includegraphics[width=0.25\textwidth]{fig/blockedpaths.pdf}
 \caption{Example of graphical model to discuss path blocking.\label{fig:path-blocking}}
 \end{figure}}\vspace{3mm}
 
@@ -427,7 +427,7 @@ $\Rightarrow$ If $A \indep B \,|\, C$, nodes within tail-to-tail or head-to-tail
 %% TODO Redo in tikz
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.3\textwidth,valign=t]{fig/II-GraphicalModels/temporal-simple.pdf}\hspace{5mm}\includegraphics[width=0.3\textwidth,valign=t]{fig/II-GraphicalModels/temporal-hmm.pdf}\hspace{5mm}\includegraphics[width=0.3\textwidth,valign=t]{fig/II-GraphicalModels/temporal2layer.pdf}
+\includegraphics[width=0.3\textwidth,valign=t]{fig/temporal-simple.pdf}\hspace{5mm}\includegraphics[width=0.3\textwidth,valign=t]{fig/temporal-hmm.pdf}\hspace{5mm}\includegraphics[width=0.3\textwidth,valign=t]{fig/temporal2layer.pdf}
 \caption{Examples of models with Markovian dependencies, from left to right: Markov chain, hidden Markov model, double hidden Markov model.\label{fig:markov-examples}}
 \end{figure}
 
@@ -440,9 +440,9 @@ $\Rightarrow$ If $A \indep B \,|\, C$, nodes within tail-to-tail or head-to-tail
 %% TODO Redo in tikz
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.3\textwidth]{fig/II-GraphicalModels/temporal-hmm.pdf}\hfill
- \includegraphics[width=0.3\textwidth]{fig/II-GraphicalModels/temporal-omm.pdf}\hfill
- \includegraphics[width=0.3\textwidth]{fig/II-GraphicalModels/temporal-ohmm.pdf}
+ \includegraphics[width=0.3\textwidth]{fig/temporal-hmm.pdf}\hfill
+ \includegraphics[width=0.3\textwidth]{fig/temporal-omm.pdf}\hfill
+ \includegraphics[width=0.3\textwidth]{fig/temporal-ohmm.pdf}
 \end{figure}
 }\vspace{3mm}
 
@@ -455,7 +455,7 @@ $\Rightarrow$ If $A \indep B \,|\, C$, nodes within tail-to-tail or head-to-tail
 \exercise{markov-blanket}{Given the probabilistic graphical model shown below, identify $\mathcal{B}_k$, $\mathcal{B}_l$, $\mathcal{B}_c$, $\mathcal{B}_e$.
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.4\textwidth]{fig/II-GraphicalModels/D-separation.pdf}
+\includegraphics[width=0.4\textwidth]{fig/D-separation.pdf}
 \end{figure}}\vspace{3mm}
 
  \remark{markov-blanket-cons}{Construction of the Markov blanket.    Given a directed acyclic graph, and a node $x$ on that graph, the Markov blanket of $x$, ${\cal B}_x$ is the set of all parents, children and co-parents of $x$.}
@@ -596,10 +596,10 @@ which implies that $p(y|x)$ does not depend on $x$. Regarding the second stateme
 \solution{markov-blanket}{The isolated variables are shown and their associated Markov blanket in purple.
 \begin{figure}[H]
  \centering
- \includegraphics[width=0.2\textwidth]{fig/II-GraphicalModels/D-separation-KBK.pdf}\hfill
- \includegraphics[width=0.2\textwidth]{fig/II-GraphicalModels/D-separation-LBL.pdf}\hfill
- \includegraphics[width=0.2\textwidth]{fig/II-GraphicalModels/D-separation-CBC.pdf}\hfill
- \includegraphics[width=0.2\textwidth]{fig/II-GraphicalModels/D-separation-EBE.pdf}
+ \includegraphics[width=0.2\textwidth]{fig/D-separation-KBK.pdf}\hfill
+ \includegraphics[width=0.2\textwidth]{fig/D-separation-LBL.pdf}\hfill
+ \includegraphics[width=0.2\textwidth]{fig/D-separation-CBC.pdf}\hfill
+ \includegraphics[width=0.2\textwidth]{fig/D-separation-EBE.pdf}
 \end{figure}
 
 }
