@@ -1,0 +1,6 @@
+HOW TO COMPILE
+
+The only thing to know is that the slides depend on the "notes" to number the exercises and remarks consistently. So:
+
+1. Compile the notes.tex with your favourite latex compiler (with the usual three-times compilation to be sure that everything is smooth).
+2. You can compile now any slides chapter.
