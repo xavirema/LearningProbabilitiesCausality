@@ -101,7 +101,7 @@
 
 \newcommand{\myarray}[2]{\left(\begin{array}{#1}#2\end{array}\right)}
 
-\title[FPDM]{Fundamentals of Probabilistic Data Mining}
+\title[LPC]{Learning, Probabilities, and Causality}
 
 \subtitle{Chapter VI - Variational Autoencoders (VAE)} % (optional)
 
@@ -689,15 +689,14 @@ Comments:
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}{Other reconstruction possibilities}
+\begin{frame}{Other reconstruction losses}
  Often, we forget about the covariance matrix of the generative model $\bs{\Sigma}_{\bs{\Theta}}$ and use other distances rather than Mahalanobis:
  \begin{itemize}
   \item The Euclidean distance (equivalent to set $\bs{\Sigma}_{\bs{\Theta}}=\bs{I}$): $\lVert \bs{x}-\bs{\mu}_{\bs{\Theta}}(\hat{\bs{z}}_r^{\bs{\Phi}})\rVert^2_2$
-  \item The $L_1$ distance: $\lVert \bs{x}-\bs{\mu}_{\bs{\Theta}}(\hat{\bs{z}}_r^{\bs{\Phi}})\rVert_1$
-  \item ...
+  \item The $L_1$ distance: $\lVert \bs{x}-\bs{\mu}_{\bs{\Theta}}(\hat{\bs{z}}_r^{\bs{\Phi}})\rVert_1$ (links with the Laplace distribution)
  \end{itemize}
 
- In that case $\bs{f}_{\bs{\Theta}}(\bs{z}):\mathbb{R}^{d_z}\rightarrow\mathbb{R}^{d_x}$ (instead of $\mathbb{R}^{2d_x}$), and this links to the deterministic autoencoders.\vspace{6mm}
+ In these cases $\bs{f}_{\bs{\Theta}}(\bs{z}):\mathbb{R}^{d_z}\rightarrow\mathbb{R}^{d_x}$ (instead of $\mathbb{R}^{2d_x}$), and this links to the deterministic autoencoders.\vspace{6mm}
  
  In addition, we can attempt to reconstruct $\bs{x}$ from another signal $\tilde{\bs{x}}$:
  \begin{tikzpicture}[->]
@@ -743,6 +742,33 @@ Comments:
   \end{tikzpicture}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{VAE Summary}
+ The models ($\bs{\Theta}$ and $\bs{\Phi}$ are the parameters of the respective networks):
+\begin{itemize}
+\item \textbf{Gen/dec}: $p(\bs{x}|\bs{z})=\MN(\bs{x};\bs{\mu}_{\bs{\Theta}}(\bs{z}),\bs{\Sigma}_{\bs{\Theta}}(\bs{z}))$, $p(\bs{z})=\mathcal{N}(\bs{0},\bs{I})$
+\item \textbf{Inf/enc}: $p(\bs{z}|\bs{x})\approx q(\bs{z}|\bs{x}) = \MN(\bs{z};\tilde{\bs{\mu}}_{\bs{\Phi}}(\bs{x}),\tilde{\bs{\Sigma}}_{\bs{\Phi}}(\bs{x}))$
+\end{itemize}\vspace{3mm}
+
+The loss (\textbf{ELBO}) needs \textbf{sampling}, $\hat{\bs{z}}_1,\ldots,\hat{\bs{z}}_R \sim q_{\bs{\Phi}}$:
+\begin{align}
+  \mathcal{L}_{\text{ELBO}}(\bs{\Theta},\bs{\Phi}) &= \underbrace{\frac{1}{R}\sum_{r=1}^R\log p_{\bs{\Theta}}(\bs{x}|\hat{\bs{z}}_r)}_{\text{Reconstruction}} -  \underbrace{D_{\text{KL}}\Big(q_{\bs{\Phi}}(\bs{z}|\bs{x})\Big\lVert p(\bs{z})\Big)}_{\text{Regularisation}}
+\end{align}
+ We use the \textbf{reparametrisation trick}: $\hat{\bs{z}}_r^{\bs{\Phi}} = \tilde{\bs{\Sigma}}_{\bs{\Phi}}^{1/2}\hat{\bs{\epsilon}}_r + \tilde{\bs{\mu}}_{\bs{\Phi}}, \hat{\bs{\epsilon}}_r\sim \MN(\bs{0},\bs{I})$\vspace{3mm}
+\begin{tikzpicture}[->]
+   \node[latent,draw] (xi) {$\bs{x}$};
+   \node[net,draw,right=of xi] (enc) {$\bs{g}_{\bs{\Phi}}$};
+   \node[latent,draw,right=of enc] (z)  {$\hat{\bs{z}}_r^{\bs{\Phi}}$};
+   \node[net,draw,right=of z] (dec) {$\bs{f}_{\bs{\Theta}}$};
+   \node[latent,draw,right=of dec] (x) {$\bs{x}$};
+   \node[draw,above=of z,yshift=-4mm] (standard) {$\MN(\bs{0},\bs{I})$};
+   \edge[dashed] {xi} {enc};
+   \edge[dashed] {enc} {z};
+   \edge[dotted,thick,red] {standard} {z};
+   \edge[dashed] {z} {dec};
+   \edge{dec} {x};
+\end{tikzpicture}
+\end{frame}
 
 \end{document}
 
