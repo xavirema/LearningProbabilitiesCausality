@@ -159,9 +159,9 @@
 %  \tableofcontents
 % \end{frame}
 % 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \section{Motivation}
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Dynamical VAE}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}{Let's recall the VAE}
@@ -466,6 +466,149 @@ Why do we use an EM for HMM and LDS, but SGD for DKF?\pause \vspace{3mm}\\Let us
   \item Training maximises the ELBO using the reparametrisation trick and sequential sampling.
   \item Many models exist (DKF, VRNN, SRNN, etc.) and can be implemented in many ways (RNNs, Transformers, etc.).
 \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Diffusion Models}
+\begin{frame}{From Noise to Data: The Big Idea}
+   Diffusion models: gradually add noise to data (\emph{forward}) and learn to reverse the process (\emph{backward}), transforming noise into data.
+   \begin{center}
+    \includegraphics[width=\textwidth]{fig/diffusion_intro.png}
+   \end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{DDPM: Denoising Diffusion Probabilistic Models}
+ The forward process:   
+  \begin{itemize}
+        \item Start with data \(\bs{x}_0\); gradually add Gaussian noise in \(T\) steps:
+            \[
+                q(\bs{x}_t | \bs{x}_{t-1}) = \mathcal{N}(\bs{x}_t; \sqrt{1-\beta_t}\bs{x}_{t-1}, \beta_t \bs{I})
+            \]
+        \item At \(t = T\), \(\bs{x}_T \sim \mathcal{N}(0, \bs{I})\), nearly pure noise.
+    \end{itemize}\vspace{6mm}
+
+The Reverse Process:
+    \begin{itemize}
+        \item Learn \(p_{\bs{\Theta}}(\bs{x}_{t-1} | \bs{x}_t)\) to denoise:
+            \[
+                p_{\bs{\Theta}}(\bs{x}_{t-1} | \bs{x}_t) = \mathcal{N}(\bs{x}_{t-1}; \mu_{\bs{\Theta}}(\bs{x}_t, t), \Sigma_{\bs{\Theta}}(\bs{x}_t, t))
+            \]
+        \item Start with noise, step-by-step denoise to sample new data.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Markov Chains and Gaussian Transitions}
+    \begin{itemize}
+        \item Both forward and reverse processes are Markovian.
+        \item Transition probabilities are Gaussian, enabling tractable computation.
+        \item The full process: \(q(\bs{x}_{1:T} | \bs{x}_0) = \prod_{t=1}^T q(\bs{x}_t | \bs{x}_{t-1})\).
+    \end{itemize}
+    \textcolor{red}{Talk about latent variables. Talk about the full forward and backward processes.}
+\end{frame}
+
+\begin{frame}{Evidence Lower Bound Objective}
+Rationale: $\bs{x}_0$ is the observed data, $\bs{x}_{1:T}$ are latent variables. We can compute the ELBO as usual:
+\begin{equation}
+  \log p_{\bs{\Theta}}(\bs{x}_0) \geq \mathbb{E}_{q(\bs{x}_{1:T}|\bs{x}_0)} \Bigg[\log \frac{p_{\bs{\Theta}}(\bs{x}_{0:T})}{q(\bs{x}_{1:T}|\bs{x}_0)}\Bigg] = \mathcal{L}
+\end{equation}
+and further rewrite it as:
+\begin{align}
+  \mathcal{L} &= D_{\text{KL}}(q(\bs{x}_T | \bs{x}_0) \| p(\bs{x}_T)) - \log p_{\bs{\Theta}}(\bs{x}_0 | \bs{x}_1) \\
+  &+ \sum_{t>1} D_{\text{KL}}(q(\bs{x}_{t-1} | \bs{x}_t, \bs{x}_0) \| p_{\bs{\Theta}}(\bs{x}_{t-1} | \bs{x}_t)) 
+\end{align}  
+    \textcolor{red}{Verify the equation above. Include the forward-backward image. Recall the Gaussianity?}
+
+\end{frame}
+
+\begin{frame}{Architectures: U-Net and Beyond}
+    \begin{itemize}
+        \item Popular choice: U-Net with time embedding input.
+        \item Conditional variants: class-conditional, text-conditional (DALL-E 2).
+    \end{itemize}
+\end{frame}
+
+\section{Connecting to SDEs}
+\begin{frame}{Discrete to Continuous-Time Limit}
+    \begin{itemize}
+        \item As the number of steps \(T \to \infty\), the process approaches a continuous diffusion:
+        \item Forward SDE:
+            \[
+                d\bs{x} = f(\bs{x}, t)dt + g(t) d\bs{w}
+            \]
+            where \(d\bs{w}\) is a Wiener process.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Variance Preserving and Exploding SDEs}
+    \begin{itemize}
+        \item Different SDEs suit different tasks:
+        \begin{itemize}
+            \item Variance Preserving (VP): interpolates between data and noise.
+            \item Variance Exploding (VE): rapidly adds noise.
+        \end{itemize}
+        \item Choice affects architecture and sampling.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Backward SDE and Denoising}
+    \begin{itemize}
+        \item Sample generation corresponds to solving a backward SDE.
+            \[
+                d\bs{x} = [f(\bs{x}, t) - g(t)^2 \nabla_{\bs{x}} \log p_t(\bs{x})]dt + g(t)d\bar{\bs{w}}
+            \]
+        \item The score function \(\nabla_{\bs{x}} \log p_t(\bs{x})\) plays a key role.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Score Functions and Training}
+    \begin{itemize}
+        \item Train a neural network to estimate the score function at various noise levels.
+        \item Minimize denoising score matching loss over all times.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{ODE Sampling}
+    \begin{itemize}
+        \item Sampling can use SDE or corresponding ODE:
+            \[
+                d\bs{x} = [f(\bs{x}, t) - 0.5g(t)^2 \nabla_{\bs{x}}\log p_t(\bs{x})]dt
+            \]
+        \item ODE sampling can yield improved, faster results.
+    \end{itemize}
+\end{frame}
+
+\section{Score-Based Diffusion Models}
+\begin{frame}{Score-Based Diffusion: Links}
+    \begin{itemize}
+        \item Score-based models directly learn \(\nabla_{\bs{x}} \log p_t(\bs{x})\).
+        \item Unified view with diffusion: both approaches sample by reversing a stochastic/noisy process.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Sampling Algorithms and Extensions}
+    \begin{itemize}
+        \item Ancestral sampling, DDIM (Denoising Diffusion Implicit Models), other ODE/SDE solvers.
+        \item Improvements in speed, flexibility, and sample quality.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Limitations and Trade-Offs}
+    \begin{itemize}
+        \item Pros: great sample quality, training stability, flexible architectures.
+        \item Cons: slow sampling, computational cost, memory.
+        \item Ongoing research: faster sampling, better priors, application domains.
+    \end{itemize}
+\end{frame}
+
+\section{Summary and Further Study}
+\begin{frame}{Recap and Resources}
+    \begin{itemize}
+        \item Key takeaways: diffusion as generative modeling via noise and denoising.
+        \item SDEs connect discrete and continuous perspectives.
+        \item Score-based modeling as a core unifying idea.
+        \item For more, see recent surveys, open-source repos, and benchmarks.
+    \end{itemize}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
